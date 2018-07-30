@@ -10,6 +10,10 @@ if(APPLE)
     set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
 endif(APPLE)
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+    set(CMAKE_CXX_FLAGS "-std=c++11")
+endif(CMAKE_COMPILER_IS_GNUCXX)
+
 set(AGIStudio_HEADERS
     agicommands.h
     game.h
