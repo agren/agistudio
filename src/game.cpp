@@ -1045,7 +1045,9 @@ int Game::RebuildVOLfiles()
         d.rename(*it, new_name);
     }
     memcpy(ResourceInfo, NewResourceInfo, sizeof(ResourceInfo));
-    QMessageBox::information(menu, "AGI studio", "Rebuilding is complete !");
+    if (popups_enabled) {
+        QMessageBox::information(menu, "AGI studio", "Rebuilding is complete !");
+    }
     return 0;
 }
 

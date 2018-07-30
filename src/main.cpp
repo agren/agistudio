@@ -20,6 +20,8 @@
 
 #include <cstdlib>
 #include <stdio.h>
+#include <iostream>
+#include <string>
 
 #include <QApplication>
 #include <QMainWindow>
@@ -30,6 +32,8 @@
 QApplication *app;
 char tmp[MAX_TMP]; //global temporary buffer
 
+extern TStringList InputLines;
+
 static char help[] =
     "QT AGI Studio v1.1.\n\
 A Sierra On-Line(tm) adventure game creator and editor.\n\
@@ -38,14 +42,21 @@ Usage: agistudio [switches] \n\
 \n\
 where [switches] are optionally:\n\
 \n\
--dir GAMEDIR   : open an existing game in GAMEDIR\n\
--help          : this message\n\
+-dir GAMEDIR    : open an existing game in GAMEDIR\n\
+-decode RESNUM  : decode logic resource nr RESNUM to stdout\n\
+-compile RESNUM : compile code from stdin to logic resource nr RESNUM\n\
+-rebuildvol     : rebuild VOL files\n\
+-help           : this message\n\
 \n";
 
 //***************************************************
 int main(int argc, char **argv)
 {
     char *gamedir = NULL;
+    int decodeResNum = -1;
+    int compileResNum = -1;
+    bool rebuildVOLFiles = false;
+    bool showGui = true;
 
     tmp[0] = 0;
 
@@ -53,7 +64,16 @@ int main(int argc, char **argv)
         if (argv[i][0] == '-') {
             if (!strcmp(argv[i] + 1, "dir"))
                 gamedir = argv[i + 1];
-            else {
+            else if (!strcmp(argv[i] + 1, "decode")) {
+                decodeResNum = atoi(argv[i + 1]);
+                showGui = false;
+            } else if (!strcmp(argv[i] + 1, "compile")) {
+                compileResNum = atoi(argv[i + 1]);
+                showGui = false;
+            } else if (!strcmp(argv[i] + 1, "rebuildvol")) {
+                rebuildVOLFiles = true;
+                showGui = false;
+            } else {
                 if (strcmp(argv[i] + 1, "help") != 0 && strcmp(argv[i] + 1, "-help") != 0)
                     printf("Unknown parameter.\n\n");
                 printf(help);
@@ -66,13 +86,64 @@ int main(int argc, char **argv)
     menu = new Menu(NULL, NULL);
 
     game = new Game();
+    game->popups_enabled = showGui;
 
-    menu->show();
+    if (showGui) {
+        menu->show();
+    }
 
     if (gamedir) {
         int err = game->open(gamedir);
-        if (!err)
-            menu->show_resources();
+        if (err) {
+            printf("Failed to open game\n");
+            return -5;
+        } else {
+            if (showGui) {
+                menu->show_resources();
+            }
+        }
     }
-    return app->exec();
+
+    if (showGui) {
+        return app->exec();
+    } else {
+        if (decodeResNum != -1) {
+            Logic logic;
+            int err = logic.decode(decodeResNum);
+            if (err) {
+                printf("Error decoding logic.%d\n", decodeResNum);
+                return -6;
+            }
+            printf("%s", logic.OutputText.c_str());
+        } else if (compileResNum != -1) {
+            Logic logic;
+            int err;
+
+            InputLines.lfree();
+            for (std::string s; std::getline(std::cin, s); ) {
+                InputLines.add(s);
+            }
+            err = logic.compile();
+            if (err) {
+                printf("Error encoding logic.%d\n", compileResNum);
+                printf("%s\n", logic.ErrorList.c_str());
+                return -7;
+            }
+            err = game->AddResource(LOGIC, compileResNum);
+            if (err) {
+                printf("Could not add resource\n");
+                return -8;
+            }
+            printf("Encoded logic.%d\n", compileResNum);
+        } else if (rebuildVOLFiles) {
+            printf("Rebuilding VOL files\n");
+            int err = game->RebuildVOLfiles();
+            if (err) {
+                printf("Failed\n");
+                return -9;
+            }
+        }
+
+        return 0;
+    }
 }

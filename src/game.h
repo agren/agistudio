@@ -76,6 +76,7 @@ public:
     bool show_elses_as_gotos;
     bool show_special_syntax; //v30=4 vs assignn(v30,4)
     bool reldir;  //if the source dir is relative to the game dir or absolute
+    bool popups_enabled = true;
     std::string command;  //interpreter command line
     std::string srcdirname;  //source dir as entered in options
     //(i.e. either relative or absolute; srcdir is always absolute)
